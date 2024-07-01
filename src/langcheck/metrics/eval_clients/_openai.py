@@ -18,7 +18,9 @@ from ._base import EvalClient
 class OpenAIEvalClient(EvalClient):
     '''EvalClient defined for OpenAI API.
     '''
-
+    input_tokens = 0
+    output_tokens = 0
+    
     def __init__(self,
                  openai_client: OpenAI | None = None,
                  openai_args: dict[str, str] | None = None,
@@ -43,6 +45,7 @@ class OpenAIEvalClient(EvalClient):
         self._openai_args = openai_args
         self._use_async = use_async
 
+        
     def _call_api(self,
                   prompts: Iterable[str | None],
                   config: dict[str, str],
@@ -86,6 +89,8 @@ class OpenAIEvalClient(EvalClient):
         # Filter out exceptions and print them out.
         for i, response in enumerate(responses):
             if not isinstance(response, Exception):
+                self.input_tokens+=response.usage.prompt_tokens
+                self.output_tokens+=response.usage.completion_tokens
                 continue
             print('OpenAI failed to return an assessment corresponding to '
                   f'{i}th prompt: {response}')
@@ -350,5 +355,5 @@ class OpenAISimilarityScorer(BaseSimilarityScorer):
         else:
             embed_response = self.openai_client.embeddings.create(
                 input=inputs, model='text-embedding-3-small')
-
+        print("embeding token: ",embed_response.usage.total_tokens)
         return torch.Tensor([item.embedding for item in embed_response.data])
